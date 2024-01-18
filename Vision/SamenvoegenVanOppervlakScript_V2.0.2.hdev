@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="23.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>*Script voor merging of different pointclouds of the Wenglor MLSL 124. ANd analyzing this data</c>
+<c>*Stijn Stuiver 27-11-2023</c>
+<c></c>
+<c>*inladen van data</c>
+<c>*Ingangs variabelen</c>
+<l>iInputDataXplus := 'C:/Git/DataBeelden/Scan0r30.ply'</l>
+<l>iInputDataXmin  := 'C:/Git/DataBeelden/Scan90r30.ply'</l>
+<l>iInputDataYplus := 'C:/Git/DataBeelden/Scan180r30.ply'</l>
+<l>iInputDataYmin  := 'C:/Git/DataBeelden/Scan270r30.ply'</l>
+<c></c>
+<l>nMaxZ  := 0e-3</l>
+<l>nMinZ  := 0e-3</l>
+<l>filterDistance3D := 1e-3</l>
+<l>filterNumPoints := 1e5</l>
+<l>holeSize := 7e-3</l>
+<c></c>
+<c>*Inlezen data</c>
+<l>read_object_model_3d (iInputDataXplus, 'm', [], [], Xplus, Status)</l>
+<l>* read_object_model_3d (iInputDataXmin, 'm', [], [], Xmin, Status)</l>
+<l>read_object_model_3d (iInputDataYplus, 'm', [], [], Yplus, Status)</l>
+<l>* read_object_model_3d (iInputDataYmin, 'm', [], [], Ymin, Status)</l>
+<c></c>
+<c>*filter Xplus</c>
+<l>connection_object_model_3d(Xplus, 'distance_3d', filterDistance3D, XplusC)</l>
+<l>select_object_model_3d(XplusC, 'num_points', 'and', filterNumPoints, 1e99, XplusSelected)</l>
+<c>*plane</c>
+<l>fit_primitives_object_model_3d (XplusSelected, ['primitive_type'], ['plane'], pXplus)</l>
+<l>get_object_model_3d_params(pXplus, 'primitive_parameter_pose', LevelPose)</l>
+<l>pose_invert (LevelPose, PoseInvert)</l>
+<l>rigid_trans_object_model_3d (XplusSelected, PoseInvert, pXplus)</l>
+<c></c>
+<c>*filter Xmin</c>
+<l>* connection_object_model_3d(Xmin, 'distance_3d', filterDistance3D, XminC)</l>
+<l>* select_object_model_3d(XminC, 'num_points', 'and', filterNumPoints, 1e99, XminSelected)</l>
+<c>*plane Xmin</c>
+<l>* fit_primitives_object_model_3d (XminSelected, ['primitive_type'], ['plane'], pXmin)</l>
+<l>* get_object_model_3d_params(pXmin, 'primitive_parameter_pose', LevelPose)</l>
+<l>* pose_invert (LevelPose, PoseInvert)</l>
+<l>* rigid_trans_object_model_3d (XminSelected, PoseInvert, pXmin)</l>
+<c></c>
+<c>*Filter Yplus</c>
+<l>connection_object_model_3d(Yplus, 'distance_3d',filterDistance3D,YplusC)</l>
+<l>select_object_model_3d(YplusC, 'num_points', 'and', filterNumPoints, 1e99, YplusSelected)</l>
+<c>*plane Yplus</c>
+<l>fit_primitives_object_model_3d (YplusSelected, ['primitive_type'], ['plane'], pYplus)</l>
+<l>get_object_model_3d_params(pYplus, 'primitive_parameter_pose', LevelPose)</l>
+<l>pose_invert (LevelPose, PoseInvert)</l>
+<l>rigid_trans_object_model_3d(YplusSelected, PoseInvert, pYplus)</l>
+<c></c>
+<c>*Filter Ymin</c>
+<l>* connection_object_model_3d(Ymin, 'distance_3d', filterDistance3D, YminC)</l>
+<l>* select_object_model_3d (YminC, 'num_points', 'and' , filterNumPoints, 1e99, YminSelected)</l>
+<c>*plane Ymin</c>
+<l>* fit_primitives_object_model_3d(YminSelected, ['primitive_type'],['plane'] , pYmin)</l>
+<l>* get_object_model_3d_params(pYmin, 'primitive_parameter_pose', LevelPose)</l>
+<l>* pose_invert (LevelPose, PoseInvert)</l>
+<l>* rigid_trans_object_model_3d(YminSelected, PoseInvert, pYmin)</l>
+<c></c>
+<c>*Rotation for mergin</c>
+<l>create_pose(0e-3, 3e-3, 0, 0, 0, 270, 'Rp+T', 'gba', 'point', rXmin)</l>
+<l>* rigid_trans_object_model_3d(pXmin, rXmin, XminCorrected)</l>
+<l>create_pose(-1.5e-3, 5e-3, 0, 0, 0, 180, 'Rp+T', 'gba', 'point', rYplus)</l>
+<l>rigid_trans_object_model_3d(pYplus, rYplus, YplusCorrected)</l>
+<l>create_pose(1.2e-3, 3.5e-3, 0, 0, 0, 90, 'Rp+T', 'gba', 'point', rYmin)</l>
+<l>* rigid_trans_object_model_3d(pYmin, rYmin, YminCorrected)</l>
+<c></c>
+<c>*Mergin pointclouds</c>
+<l>union_object_model_3d([pXplus,YplusCorrected],'points_surface', UnionObjectModel3D)</l>
+<c></c>
+<l>* union_object_model_3d([pXplus,YplusCorrected,XminCorrected,YminCorrected],'points_surface', UnionObjectModel3D)</l>
+<c></c>
+<c>*Selecting a Hole</c>
+<c>* hole coordinates (define coordinates)</c>
+<l>XHole := [17e-3]</l>
+<l>YHole := [38e-3]</l>
+<c></c>
+<c>* select hole</c>
+<l>ZHeightHole := []</l>
+<l>for holeIndex := 0 to |XHole|-1 by 1</l>
+<l>    select_points_object_model_3d(UnionObjectModel3D, 'point_coord_x', XHole[holeIndex] - holeSize, XHole[holeIndex] + holeSize, Hole)</l>
+<l>    select_points_object_model_3d(Hole, 'point_coord_y', YHole[holeIndex] - holeSize, YHole[holeIndex] + holeSize, Hole)</l>
+<l>endfor</l>
+<l>fit_primitives_object_model_3d(Hole, 'primitive_type', 'plane',Plane)</l>
+<l>get_object_model_3d_params(Plane, 'center', PlaneCenter)</l>
+<c></c>
+<l>select_points_object_model_3d(Hole, 'point_coord_z' , -999 ,2e-20, HoleFiltered)</l>
+<c></c>
+<l>select_points_object_model_3d(Hole, 'point_coord_z', -999, PlaneCenter[2] - 0.001, HoleFiltered)</l>
+<l>*  select_points_object_model_3d(HoleFiltered, 'point_coord_z', PlaneCenter[2] + 4e-3, 99e99, HoleFiltered)</l>
+<c></c>
+<l>fit_primitives_object_model_3d(HoleFiltered, ['primitive_type','min_radius','max_radius'], ['cylinder', 0.001, 0.050], Cylinder)</l>
+<c></c>
+<l>CamParam := ['area_scan_division',0.06,0,8.5e-06,8.5e-06,434,532,868,1064]</l>
+<l>Pose := [0.00741587,-0.109205,1.0804,332.322,357.792,0.494959,0]</l>
+<l>GenParamName := ['colored','alpha','color_0']</l>
+<l>GenParamValue := [12,0.9,'light gray']</l>
+<l>dev_get_window (WindowHandle)</l>
+<l>disp_object_model_3d (WindowHandle, Xplus, CamParam, Pose, GenParamName, GenParamValue)</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>

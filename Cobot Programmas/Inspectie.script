@@ -1,0 +1,95 @@
+###
+# Next functions are for the inspection how deep the helicoils are placed inside their holes ;)
+# DirectiomalMovement is a variable that will tell the fucntion what axis is used for the movement:
+# 0: X
+# 1: Y
+# 2: Z
+# 3: XZ
+###
+
+
+#Arrays to inspect the placed helicoils
+global arrayStartX        = [0,0,0,0,0,0]
+global arrayStartZ        = [0,0,0,0,0,0]
+global arrayFinishX       = [0,0,0,0,0,0]
+global arrayFinishZ       = [0,0,0,0,0,0]
+#Results from the inspection
+global ControlShort      = [0,0,0,0,0,0]
+global ControlLong       = [0,0,0,0,0,0]
+global ControlSpecial    = [0,0,0,0,0,0]
+global ControlWrong      = [0,0,0,0,0,0]
+global ControlSingle     = [0,0,0,0,0,0]
+
+#How many went wrong while placing helicoils
+global Interventions     = 0
+
+#When calling this function it will return the wanted XYZ pose from the tcp
+def Postion(RouteIndex, Start, PostionArrayX,PostionArrayZ):
+  arrayX = PostionArrayX
+  arrayZ = PostionArrayZ
+  freedrive_mode()
+  sleep(0.01)
+  Pose  = get_actual_tcp_pose()
+  end_freedrive_mode()
+  sleep(0.01)
+  arrayX[RouteIndex] = Pose[0]
+  arrayZ[RouteIndex] = Pose[2]
+  if (Start):
+    arrayStartX = arrayX
+    arrayStartZ = arrayZ
+  else:
+    arrayFinishX = arrayX
+    arrayFinishZ = arrayZ
+  end
+end
+
+#This function is for checking if the helicoil is placed at the right height everything is in mm. only the postionArrays are in meters
+# 0: Right
+# 1: Left
+# 2: Slope
+# 3: Back
+# 4: Flat
+# 5: Upside
+def PostionControl(RouteIndex, Side, Route ,ToolcollarDistance, ControlArray):
+array= ControlArray
+if Side == 0:
+  array[RouteIndex] = arrayStartX[RouteIndex] - arrayFinishX[RouteIndex]
+elif Side == 1:
+  array[RouteIndex] = arrayStartX[RouteIndex] - arrayFinishX[RouteIndex]
+elif Side == 2:
+  xstart = arrayStartX[RouteIndex]/-1
+  xend = arrayFinishX[RouteIndex]/-1
+  x = xstart - xend
+  zstart = arrayStartZ[RouteIndex]
+  zend   = arrayFinishZ[RouteIndex]
+  z = zend - zstart
+  x2 = x*x
+  z2 = z*z
+  result= x2+z2
+  square = sqrt(result)
+  mmSquare = square * 1000
+  array[RouteIndex] = mmSquare - 1.5 - ToolcollarDistance
+elif Side == 3:
+  array[RouteIndex] = arrayStartX[RouteIndex] - arrayFinishX[RouteIndex]
+elif Side == 4:
+  array[RouteIndex] = arrayStartX[RouteIndex] - arrayFinishX[RouteIndex]
+elif Side == 5:
+  array[RouteIndex] = arrayStartX[RouteIndex] - arrayFinishX[RouteIndex]
+end
+
+if Route == 0:
+  ControlShort = array
+elif Route == 1:
+  ControlSpecial = array
+elif Route == 2:
+  ControlSingle = array
+elif Route == 3:
+  ControlLong = array
+elif Route == 4: 
+  ControlWrong = array
+end
+  if ((array[RouteIndex] < 0.1) and (array[RouteIndex] > 0.3)):
+    popup("Helicoil outside the correct range of placement", title="Popup", warning=False, error=True)
+    Interventions = Interventions + 1
+  end
+end

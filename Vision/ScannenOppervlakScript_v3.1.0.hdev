@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="23.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>*17-11-2023 by Stijn Stuiver</c>
+<c>*Image grabber Wenglot MLSL 124 sensor, Code used to make this is the example code from wenglor</c>
+<l>dev_update_window ('off')</l>
+<l>dev_close_window ()</l>
+<l>dev_open_window_fit_size (0, 0, 2800, 2800, -1, -1, WindowHandle1)</l>
+<c>*</c>
+<c>* Path to location of weCat3DGigEInterface.exe on your local system</c>
+<l>Path := 'C:/Software/weCat3DGigEInterface/'</l>
+<c>* IP address of Ethernet adapter on your local system connected to the sensor (static IP required)</c>
+<l>ServerIP := '169.254.138.153'</l>
+<c>* weCat3D's IP address (subnets must match)</c>
+<l>weCat3DIP := '169.254.0.130'</l>
+<c>* </c>
+<c>*Framerate</c>
+<l>Framerate := 200</l>
+<l>LineAcquisitionTime := 5000</l>
+<c>* Setup the number of profiles per image (Height of the image)</c>
+<l>numberOfProfilesPerImage := 1000</l>
+<c>*Lenght of Object of instrest </c>
+<l>LengthOfObject := 90</l>
+<c>*Angle of Sensor</c>
+<l>Angle := 45</l>
+<c>*Axis from scan to scan</c>
+<l>Axis := 90</l>
+<c>*Cosine of Angle</c>
+<l>AngleRad := rad(Angle)</l>
+<l>Cosine := cos(AngleRad)</l>
+<c>*Lenght of scan</c>
+<l>LengthScan := LengthOfObject/Cosine</l>
+<c>*Time to scan</c>
+<l>Time := numberOfProfilesPerImage/Framerate</l>
+<c>*speed of sensor mm/s</c>
+<l>Speed := LengthOfObject/Time</l>
+<l>scale := 1e-6</l>
+<c>* Setup the scale for Y axis</c>
+<l>SpeedAngle := LengthScan/Time</l>
+<l>scale := 1e-6</l>
+<l>scaleY:=  Speed*scale</l>
+<c>* Setup the offset for Y axis</c>
+<l>offsetY := 0</l>
+<c>* Activate the intesity component in the output frame</c>
+<l>useIntensity := false</l>
+<c>* Use Encoder trigger source or free running mode</c>
+<l>useEncoder := true</l>
+<c>* Set exposure time [us]</c>
+<l>exposureTime := 150</l>
+<c>* Signal selection (variable of scanner that decides how to compute laser line position) ('Top', 'SignalWidth', 'Strength', 'Bottom')</c>
+<l>SignalSelection := 'Strength'</l>
+<c>*Index number for file name</c>
+<l>Index := 0</l>
+<c>*Filename</c>
+<l>Naam := 'Test2' + SignalSelection + Index</l>
+<c></c>
+<c></c>
+<c>* Connect to the weCat3D</c>
+<l>detect_wenglor_sensor (Path, ServerIP, weCat3DIP, AcqHandle)</l>
+<c>*</c>
+<l>info_framegrabber('GigEVision2', 'parameters', Information, ValueList)</l>
+<l>get_framegrabber_param(AcqHandle, 'available_param_names', Value)</l>
+<c></c>
+<c>* Generate HALCON 3D object mode from the received frame</c>
+<l>set_framegrabber_param (AcqHandle, 'create_objectmodel3d', 'enable')</l>
+<c>* Setup the grab_timeout</c>
+<l>set_framegrabber_param (AcqHandle, 'grab_timeout', 10000)</l>
+<c>* Enable adding the intensity attribute to the 3D object mode</c>
+<l>set_framegrabber_param (AcqHandle, 'add_objectmodel3d_overlay_attrib', 'enable')</l>
+<c></c>
+<c>* Activate the Range component in the output frame</c>
+<l>set_framegrabber_param (AcqHandle, 'ComponentSelector', 'Range')</l>
+<l>set_framegrabber_param (AcqHandle, 'PixelFormat', 'Coord3D_ABC32f')</l>
+<c></c>
+<c>* Activate the intensity component in the output frame</c>
+<l>set_framegrabber_param (AcqHandle, 'ComponentSelector', 'Intensity')</l>
+<l>set_framegrabber_param (AcqHandle, 'PixelFormat', 'Mono10Packed')</l>
+<l>if(useIntensity)</l>
+<l>    set_framegrabber_param (AcqHandle, 'ComponentEnable', 1)</l>
+<l>else</l>
+<l>    set_framegrabber_param (AcqHandle, 'ComponentEnable', 0)</l>
+<l>endif</l>
+<c>* Set exposure time</c>
+<l>set_framegrabber_param(AcqHandle, 'ExposureTime', exposureTime)</l>
+<c>*</c>
+<c>* Set the number of profiles per image</c>
+<l>set_framegrabber_param (AcqHandle, 'RegionSelector', 'Scan3DExtraction0')</l>
+<l>set_framegrabber_param (AcqHandle, 'Height', numberOfProfilesPerImage)</l>
+<c></c>
+<c>*Set the framerate</c>
+<l> set_framegrabber_param(AcqHandle,'AcquisitionLineRate' ,LineAcquisitionTime)</l>
+<c>*</c>
+<c>* Set the Y axis source, Scale and Offset</c>
+<l>set_framegrabber_param (AcqHandle, 'Scan3dCoordinateSelector', 'CoordinateB')</l>
+<l>set_framegrabber_param (AcqHandle, 'Scan3dCoordinateScale', scaleY)</l>
+<l>set_framegrabber_param (AcqHandle, 'Scan3dCoordinateOffset', offsetY)</l>
+<l>set_framegrabber_param (AcqHandle, 'Scan3dCoordinateSource', 'Timestamp')</l>
+<c></c>
+<c>* Get the value of non valid points to filter them out from the pointcloud</c>
+<l>set_framegrabber_param (AcqHandle, 'Scan3dCoordinateSelector', 'CoordinateC')</l>
+<l>get_framegrabber_param (AcqHandle, 'Scan3dAxisMin', AxisMinZ)</l>
+<l>get_framegrabber_param (AcqHandle, 'Scan3dAxisMax', AxisMaxZ)</l>
+<c>*</c>
+<c>* Set the LinStart trigger mode and source</c>
+<l>set_framegrabber_param (AcqHandle, 'TriggerSelector', 'FrameStart')</l>
+<l>set_framegrabber_param (AcqHandle, 'TriggerMode', 'On')</l>
+<l>set_framegrabber_param (AcqHandle, 'TriggerSource', 'Line1')</l>
+<c></c>
+<l>set_framegrabber_param(AcqHandle, 'SignalSelection', SignalSelection)</l>
+<c></c>
+<c>* Start async grabing</c>
+<l>grab_image_start(AcqHandle, -1)</l>
+<l as_id="image_acquisition" as_name="Image Acquisition 01" as_grp="[2,2]" as_ord="1">while (true)</l>
+<l>        dev_clear_window ()</l>
+<l>    disp_message (WindowHandle1, 'Waiting for image', 'window', 12, 12, 'black', 'true')</l>
+<c>    *</c>
+<c>    * Grab the Point Cloud</c>
+<c>    * Set PixelFormat to Coord3D_ABC32f for a native point cloud data format</c>
+<l>     try</l>
+<l>         grab_data_async(Image, region, contours, AcqHandle, -1 ,ObjectModel3D)</l>
+<l>         get_framegrabber_param (AcqHandle, 'image_contents', ImageContents)</l>
+<l>     catch (Exception)</l>
+<l>         continue</l>
+<l>     endtry</l>
+<c> </c>
+<l>    if(useIntensity)</l>
+<c>        * Grab the intensity image from the received frame</c>
+<l>        index := find(ImageContents,'image') + 1</l>
+<l>        select_obj (Image, Intensity, index)</l>
+<l>        get_region_points (Intensity, Rows, Columns)</l>
+<l>        get_grayval (Intensity, Rows, Columns, AttribValues)</l>
+<l>        AttribNames := 'intensity'   </l>
+<l>        set_object_model_3d_attrib_mod (ObjectModel3D, '&amp;' + AttribNames, 'points', AttribValues)</l>
+<l>    endif         </l>
+<c>    * Delete non-valid points (when Z = 0)</c>
+<l>    select_points_object_model_3d(ObjectModel3D, 'point_coord_z', AxisMinZ*0.001, AxisMaxZ*0.001, ObjectModel3D)</l>
+<c>    </c>
+<c>     * Save point cloud to file</c>
+<l>    imagename :=  Naam + '.ply'</l>
+<l>    write_object_model_3d(ObjectModel3D, 'ply', 'C:/Git/DataBeelden//'+ imagename, 'invert_normals','true')</l>
+<l>    Index := Index + Axis</l>
+<c>    </c>
+<l>    dev_clear_window ()</l>
+<l>    dev_get_preferences ('suppress_handled_exceptions_dlg', SuppressHandledExceptionsDlg)</l>
+<l>    dev_set_preferences ('suppress_handled_exceptions_dlg', 'true')</l>
+<l>    try</l>
+<l>        if(useIntensity)</l>
+<l>            visualize_object_model_3d (WindowHandle1, ObjectModel3D, [], [], AttribNames, '&amp;' + AttribNames, [], [], [], PoseOut)         </l>
+<l>        else</l>
+<l>            visualize_object_model_3d (WindowHandle1, ObjectModel3D, [], [], ['intensity','lut'], ['coord_z','rainbow'], [], [], [], PoseOut)         </l>
+<l>        endif</l>
+<l>    catch (Exception)</l>
+<c>        * </c>
+<c>        * ObjectModel3DThresholded contains no points.</c>
+<l>        dev_disp_text ('ObjectModel3D contains no points', 'window', 12, 12, 'black', [], [])</l>
+<l>        dev_disp_text ('Press Run (F5) to continue', 'window', 'bottom', 'right', 'black', [], [])</l>
+<l>        stop ()</l>
+<l>    endtry</l>
+<l>    dev_set_preferences ('suppress_handled_exceptions_dlg', SuppressHandledExceptionsDlg)</l>
+<c>    * </c>
+<c>    * Clear the ObjectModel3D for the next loop   </c>
+<l>    clear_object_model_3d (ObjectModel3D)</l>
+<l as_id="image_acquisition" as_name="Image Acquisition 01" as_grp="[3,1]" as_ord="1">endwhile</l>
+<c>* </c>
+<l as_id="image_acquisition" as_name="Image Acquisition 01" as_grp="[4,1]" as_ord="1">close_framegrabber (AcqHandle)</l>
+<c>*</c>
+<c>*</c>
+<l>dev_update_window ('on')</l>
+<c>* </c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="detect_wenglor_sensor">
+<interface>
+<ic>
+<par name="Path" base_type="ctrl" dimension="0"/>
+<par name="IP" base_type="ctrl" dimension="0"/>
+<par name="DeviceIP" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="AcqHandle" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>file_exists (Path + '/' + 'weCat3DGigEInterface.exe', FileExists)</l>
+<l>if (not FileExists)</l>
+<c>    * The weCat3DGigEInterface is not at the specified Path.</c>
+<c>    * Please note that you first need to install and start the</c>
+<c>    * weCat3DGigeInterface application which you can download from</c>
+<c>    * https://www.wenglor.com/directlink/weCat3D_GigEVision_SDK</c>
+<l>    stop ()</l>
+<l>endif</l>
+<l>system_call ('start ' + Path + '/' + 'weCat3DGigEInterface.exe -s' + IP + ' -i' + DeviceIP)</l>
+<l>wait_seconds (3)</l>
+<c></c>
+<l>info_framegrabber ('GigEVision2', 'devices', Information, Devices)</l>
+<l>tuple_regexp_select (Devices, 'wenglor', Devices)</l>
+<l>open_framegrabber ('GigEVision2', 0, 0, 0, 0, 0, 0, 'default', -1, 'default', 'force_sockdrv=1', 'false', 'default', Devices[0], 0, -1, AcqHandle)</l>
+<l>return ()</l>
+</body>
+<docu id="detect_wenglor_sensor">
+<parameters>
+<parameter id="AcqHandle"/>
+<parameter id="DeviceIP"/>
+<parameter id="IP"/>
+<parameter id="Path"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="convert_image_to_objectmodel3d">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="X" base_type="iconic" dimension="0"/>
+<par name="Y" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="ScaledWorkingRange" base_type="ctrl" dimension="0"/>
+<par name="ScaledWorkingRangeStart" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ObjectModel3DThresholded" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>ImageOut := Image</l>
+<l>convert_image_type (ImageOut, ImageOut, 'real')</l>
+<c>* </c>
+<c>* Calculate the Z values from the intensities</c>
+<l>scale_image (ImageOut, Z, ScaledWorkingRange, ScaledWorkingRangeStart)</l>
+<c>* </c>
+<c>* Generate the ObjectModel3D and visualize it, press the button to continue</c>
+<l>xyz_to_object_model_3d (X, Y, Z, ObjectModel3D)</l>
+<l>select_points_object_model_3d (ObjectModel3D, 'point_coord_z', ScaledWorkingRangeStart + 0.0000001, 1, ObjectModel3DThresholded)</l>
+<l>clear_object_model_3d (ObjectModel3D)</l>
+<l>return ()</l>
+</body>
+<docu id="convert_image_to_objectmodel3d">
+<parameters>
+<parameter id="Image"/>
+<parameter id="ObjectModel3DThresholded"/>
+<parameter id="ScaledWorkingRange"/>
+<parameter id="ScaledWorkingRangeStart"/>
+<parameter id="X"/>
+<parameter id="Y"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
